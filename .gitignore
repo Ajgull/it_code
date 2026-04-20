@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.idea
+/venv
+/.venv/
+/node_modules
+*.sqlite3
+*.db
+__pycache__
+media
+logs/*
+!logs/.gitkeep
+/.python-version
+/.env
+.env
+.DS_Store
+.zed/

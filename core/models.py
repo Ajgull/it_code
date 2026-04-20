@@ -89,17 +89,6 @@ class Comment(models.Model):
     def __str__(self):
         return f"user {self.author} write the comment {self.content[:20]}"
 
-    def clean(self):
-        if self.parent_comment:
-            if self.parent_comment.depth_level < 2:
-                self.depth_level = self.parent_comment.depth_level + 1
-        else:
-            self.depth_level = 0
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
-
 
 class Vote(models.Model):  # голоса
     vote_type = models.CharField(choices=VOTE_CHOICES)

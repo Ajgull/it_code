@@ -18,7 +18,7 @@ class Tag(models.Model):
 
 class Post(models.Model):
     title = models.CharField(verbose_name="title", max_length=255)
-    descripeion = models.TextField(verbose_name="description")
+    description = models.TextField(verbose_name="description")
     image = models.ImageField(
         upload_to="posts/",
         verbose_name="post_img",

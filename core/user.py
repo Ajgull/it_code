@@ -23,6 +23,3 @@ class User(AbstractUser):
         verbose_name = "user"
         verbose_name_plural = "users"
         ordering = ["username"]
-
-    def __str__(self) -> str:
-        return f"User {self.username}, email - {self.email}"

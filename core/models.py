@@ -7,9 +7,6 @@ from core.user import User
 class Category(models.Model):
     title = models.CharField(verbose_name="title", max_length=255)
 
-    def __str__(self):
-        return f"Category name - {self.title}"
-
 
 class Tag(models.Model):
     name = models.CharField(verbose_name="name", max_length=50, unique=True)
@@ -18,13 +15,10 @@ class Tag(models.Model):
         verbose_name = "tag"
         verbose_name_plural = "tags"
 
-    def __str__(self):
-        return self.name
-
 
 class Post(models.Model):
     title = models.CharField(verbose_name="title", max_length=255)
-    descripeion = models.TextField(verbose_name="description")
+    description = models.TextField(verbose_name="description")
     image = models.ImageField(
         upload_to="posts/",
         verbose_name="post_img",
@@ -57,9 +51,6 @@ class Post(models.Model):
         verbose_name = "post"
         verbose_name_plural = "posts"
 
-    def __str__(self):
-        return f"post {self.title}, author {self.author.username}, description {self.descripeion}, category of post {self.category}"
-
 
 class Comment(models.Model):
     content = models.TextField(verbose_name="content")
@@ -85,9 +76,6 @@ class Comment(models.Model):
     class Meta:
         verbose_name = "comment"
         verbose_name_plural = "comments"
-
-    def __str__(self):
-        return f"user {self.author} write the comment {self.content[:20]}"
 
 
 class Vote(models.Model):  # голоса
@@ -133,9 +121,6 @@ class GlobalStopWord(models.Model):
         verbose_name = "global_stop_word"
         verbose_name_plural = "global_stop_words"
 
-    def __str__(self):
-        return self.word
-
 
 class PostStopWord(models.Model):
     word = models.CharField(verbose_name="word", max_length=100)
@@ -153,6 +138,3 @@ class PostStopWord(models.Model):
     class Meta:
         verbose_name = "post_stop_word"
         verbose_name_plural = "post_stop_words"
-
-    def __str__(self):
-        return f"{self.word} post {self.post_id}"

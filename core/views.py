@@ -35,6 +35,9 @@ class PostImageView(
     serializer_class = PostImageSerializer
     queryset = Post.objects.all()
 
+    def get_queryset(self):
+        return Post.objects.filter(deleted=False)
+
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 

@@ -1,4 +1,6 @@
+from django.db.models import Q
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from core.models import (
     Category,
@@ -11,6 +13,53 @@ from core.models import (
     Vote,
 )
 from core.service import calculate_comment_depth
+
+
+class CustomTokenSerializer(TokenObtainPairSerializer):
+    username_or_email = "username_or_email"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields[self.username_or_email] = serializers.CharField()
+        del self.fields["username"]
+
+    def validate(self, attrs):
+        username_or_email = attrs.get("username_or_email")
+        password = attrs.get("password")
+        user = User.objects.filter(
+            Q(username=username_or_email) | Q(email=username_or_email)
+        ).first()
+
+        if not user:
+            raise serializers.ValidationError("No user with this data")
+
+        if not user.is_active:
+            raise serializers.ValidationError("User not active")
+
+        if not user.check_password(password):
+            raise serializers.ValidationError("Wrong password")
+
+        refresh = self.get_token(user)
+
+        return {"access": str(refresh.access_token), "refresh": str(refresh)}
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    role = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "role", "is_active", "password"]
+        read_only_fields = ["id", "is_active"]
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data.get("email"),
+            password=validated_data["password"],
+        )
+        return user
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -68,13 +117,17 @@ class CommentSerializer(serializers.ModelSerializer):
     parent_comment_id = serializers.IntegerField(
         write_only=True, required=False, allow_null=True, default=None
     )
+    post_id = serializers.IntegerField(required=True)
+    author_name = serializers.CharField(source="author.username", read_only=True)
 
     class Meta:
+        model = Comment
         model = Comment
         fields = [
             "id",
             "content",
             "author",
+            "author_name",
             "post_id",
             "parent_comment_id",
             "parent_comment",

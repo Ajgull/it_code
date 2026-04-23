@@ -1,7 +1,9 @@
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics, mixins, viewsets
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework import generics, mixins, status, viewsets
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from core.filters import CommentFilter, PostFilter, UserFilter
 from core.models import (
@@ -18,14 +20,49 @@ from core.permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
 from core.serializers import (
     CategorySerializer,
     CommentSerializer,
+    CustomTokenSerializer,
     GlobalStopWordSerializer,
     PostImageSerializer,
     PostSerializer,
     PostStopWordSerializer,
     TagSerializer,
+    UserCreateSerializer,
     UserSerializer,
     VoteSerializer,
 )
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = CustomTokenSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid()
+        return Response(serializer.validated_data)
+
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = UserCreateSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(
+                {
+                    "message": "User created",
+                    "user": {
+                        "id": user.id,
+                        "username": user.username,
+                        "email": user.email,
+                        "role": getattr(user, "role", None),
+                    },
+                },
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PostView(viewsets.ModelViewSet):
@@ -41,6 +78,7 @@ class PostView(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def perform_destroy(
+        self,
         instance,
     ):  # дополнительные действия при создании, класс DestroyModelMixin
         instance.status = "deleted"
@@ -54,7 +92,7 @@ class PostImageView(
 ):
     serializer_class = PostImageSerializer
     queryset = Post.objects.all()
-    permission_classes = [IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -74,6 +112,7 @@ class VoteView(
 ):
     serializer_class = VoteSerializer
     queryset = Vote.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -85,7 +124,7 @@ class GlobalStopWordView(
 ):
     serializer_class = GlobalStopWordSerializer
     queryset = GlobalStopWord.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -100,7 +139,7 @@ class PostStopWordView(
 ):
     serializer_class = PostStopWordSerializer
     queryset = PostStopWord.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

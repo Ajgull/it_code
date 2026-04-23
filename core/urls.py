@@ -2,18 +2,20 @@ from django.contrib import admin
 from django.urls import path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
 
+# from rest_framework_simplejwt.views import (
+#     TokenObtainPairView,
+#     TokenRefreshView,
+# )
 from core.views import (
     CategoryView,
     CommentView,
     GlobalStopWordView,
+    LoginView,
     PostImageView,
     PostStopWordView,
     PostView,
+    RegisterView,
     TagView,
     UserView,
     VoteView,
@@ -42,6 +44,8 @@ urlpatterns = [
     ),
     path("post_stop_words/", PostStopWordView.as_view(), name="post_stop_word_list"),
     path("posts/<int:pk>/image/", PostImageView.as_view(), name="post_image"),
-    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/register/", RegisterView.as_view(), name="register"),
+    path("api/login/", LoginView.as_view(), name="login"),
+    # path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    # path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ] + router.urls

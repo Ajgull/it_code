@@ -1,4 +1,6 @@
+from django.utils import timezone
 from rest_framework import generics, mixins, viewsets
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 from core.models import (
     Category,
@@ -10,6 +12,7 @@ from core.models import (
     User,
     Vote,
 )
+from core.permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
 from core.serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -25,7 +28,20 @@ from core.serializers import (
 
 class PostView(viewsets.ModelViewSet):
     serializer_class = PostSerializer
-    queryset = Post.objects.all()
+    queryset = Post.objects.filter(deleted__isnull=True)
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(
+        self, serializer
+    ):  # дополнительные действия при создании, класс CreateModelMixin
+        serializer.save(author=self.request.user)
+
+    def perform_destroy(
+        instance,
+    ):  # дополнительные действия при создании, класс DestroyModelMixin
+        instance.status = "deleted"
+        instance.deleted = timezone.now()
+        instance.save()
 
 
 class PostImageView(
@@ -34,6 +50,7 @@ class PostImageView(
 ):
     serializer_class = PostImageSerializer
     queryset = Post.objects.all()
+    permission_classes = [IsOwnerOrReadOnly]
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -42,6 +59,10 @@ class PostImageView(
 class CommentView(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     queryset = Comment.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
 class VoteView(
@@ -61,6 +82,10 @@ class GlobalStopWordView(
 ):
     serializer_class = GlobalStopWordSerializer
     queryset = GlobalStopWord.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -72,6 +97,10 @@ class PostStopWordView(
 ):
     serializer_class = PostStopWordSerializer
     queryset = PostStopWord.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -86,6 +115,7 @@ class CategoryView(
 ):
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
@@ -114,3 +144,4 @@ class TagView(
 class UserView(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all()
+    permission_classes = [IsAdminOrReadOnly]

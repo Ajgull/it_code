@@ -10,6 +10,7 @@ from core.models import (
     User,
     Vote,
 )
+from core.service import calculate_comment_depth
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -63,6 +64,11 @@ class PostImageSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    post_id = serializers.IntegerField(write_only=True, required=True)
+    parent_comment_id = serializers.IntegerField(
+        write_only=True, required=False, allow_null=True, default=None
+    )
+
     class Meta:
         model = Comment
         fields = [
@@ -70,11 +76,36 @@ class CommentSerializer(serializers.ModelSerializer):
             "content",
             "author",
             "post_id",
-            "tags",
             "parent_comment_id",
+            "parent_comment",
+            "tags",
             "depth_level",
         ]
-        read_only_fields = ["id", "author", "depth_level"]
+        read_only_fields = ["id", "author", "depth_level", "parent_comment"]
+
+    def create(self, validated_data):
+        post_id = validated_data.pop("post_id")
+        parent_comment_id = validated_data.pop("parent_comment_id", None)
+        tags = validated_data.pop("tags", [])
+
+        post = Post.objects.get(id=post_id)
+        parent_comment = None
+        if parent_comment_id:
+            parent_comment = Comment.objects.get(id=parent_comment_id)
+
+        depth_level = calculate_comment_depth(parent_comment)
+
+        comment = Comment.objects.create(
+            post=post,
+            parent_comment=parent_comment,
+            depth_level=depth_level,
+            **validated_data,
+        )
+
+        if tags:
+            comment.tags.set(tags)
+        comment.save()
+        return comment
 
 
 class VoteSerializer(serializers.ModelSerializer):
@@ -88,7 +119,7 @@ class GlobalStopWordSerializer(serializers.ModelSerializer):
     class Meta:
         model = GlobalStopWord
         fields = ["id", "word", "created_at", "created_by"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "created_by"]
 
 
 class PostStopWordSerializer(serializers.ModelSerializer):

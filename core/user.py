@@ -17,7 +17,7 @@ class User(AbstractUser):
         blank=True,
         null=True,
     )
-    is_active = models.BooleanField(verbose_name="active", default=False)
+    is_active = models.BooleanField(verbose_name="active", default=True)
 
     class Meta:
         verbose_name = "user"

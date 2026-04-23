@@ -1,5 +1,8 @@
+from django.db.models import Q
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from core.consts import VOTE_CHOICES
 from core.models import (
     Category,
     Comment,
@@ -10,6 +13,54 @@ from core.models import (
     User,
     Vote,
 )
+from core.service import calculate_comment_depth
+
+
+class CustomTokenSerializer(TokenObtainPairSerializer):
+    username_or_email = "username_or_email"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields[self.username_or_email] = serializers.CharField()
+        del self.fields["username"]
+
+    def validate(self, attrs):
+        username_or_email = attrs.get("username_or_email")
+        password = attrs.get("password")
+        user = User.objects.filter(
+            Q(username=username_or_email) | Q(email=username_or_email)
+        ).first()
+
+        if not user:
+            raise serializers.ValidationError("No user with this data")
+
+        if not user.is_active:
+            raise serializers.ValidationError("User not active")
+
+        if not user.check_password(password):
+            raise serializers.ValidationError("Wrong password")
+
+        refresh = self.get_token(user)
+
+        return {"access": str(refresh.access_token), "refresh": str(refresh)}
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    role = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "role", "is_active", "password"]
+        read_only_fields = ["id", "is_active"]
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data.get("email"),
+            password=validated_data["password"],
+        )
+        return user
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -63,32 +114,97 @@ class PostImageSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    post_id = serializers.IntegerField(write_only=True, required=True)
+    parent_comment_id = serializers.IntegerField(
+        write_only=True, required=False, allow_null=True, default=None
+    )
+    post_id = serializers.IntegerField(required=True)
+    author_name = serializers.CharField(source="author.username", read_only=True)
+
     class Meta:
+        model = Comment
         model = Comment
         fields = [
             "id",
             "content",
             "author",
+            "author_name",
             "post_id",
-            "tags",
             "parent_comment_id",
+            "parent_comment",
+            "tags",
             "depth_level",
         ]
-        read_only_fields = ["id", "author", "depth_level"]
+        read_only_fields = ["id", "author", "depth_level", "parent_comment"]
+
+    def create(self, validated_data):
+
+        user = self.context["request"].user
+        post_id = validated_data.pop("post_id")
+        parent_comment_id = validated_data.pop("parent_comment_id", None)
+        tags = validated_data.pop("tags", [])
+
+        post = Post.objects.get(id=post_id)
+        parent_comment = None
+        if parent_comment_id:
+            parent_comment = Comment.objects.get(id=parent_comment_id)
+
+        depth_level = calculate_comment_depth(parent_comment)
+
+        comment = Comment.objects.create(
+            author=user,
+            post=post,
+            parent_comment=parent_comment,
+            depth_level=depth_level,
+            **validated_data,
+        )
+
+        if tags:
+            comment.tags.set(tags)
+        return comment
 
 
 class VoteSerializer(serializers.ModelSerializer):
+    comment_id = serializers.IntegerField(required=False, allow_null=True)
+    post_id = serializers.IntegerField(required=False, allow_null=True)
+    action = serializers.ChoiceField(choices=VOTE_CHOICES, write_only=True)
+
     class Meta:
         model = Vote
-        fields = ["id", "user", "post", "comment", "vote_type"]
-        read_only_fields = ["id"]
+        fields = [
+            "id",
+            "vote_type",
+            "comment_id",
+            "post_id",
+            "action",
+        ]
+        read_only_fields = ["id", "user", "vote_type"]
+
+    def create(self, validated_data):
+        comment_id = validated_data.pop("comment_id", None)
+        post_id = validated_data.pop("post_id", None)
+        action = validated_data.pop("action")
+        user = self.context["request"].user
+
+        if post_id:
+            lookup_fields = {"user": user, "post_id": post_id}
+        elif comment_id:
+            lookup_fields = {"user": user, "comment_id": comment_id}
+        else:
+            raise serializers.ValidationError("post_id or comment_id is required")
+
+        vote, created = Vote.objects.update_or_create(
+            **lookup_fields, defaults={"vote_type": action}
+        )
+
+        return vote
 
 
 class GlobalStopWordSerializer(serializers.ModelSerializer):
     class Meta:
         model = GlobalStopWord
         fields = ["id", "word", "created_at", "created_by"]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "created_by"]
 
 
 class PostStopWordSerializer(serializers.ModelSerializer):

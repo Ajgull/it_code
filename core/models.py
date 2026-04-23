@@ -55,18 +55,19 @@ class Post(models.Model):
 class Comment(models.Model):
     content = models.TextField(verbose_name="content")
     depth_level = models.IntegerField(default=0, verbose_name="level_of_depth")
-    parent_comment_id = models.ForeignKey(
+    parent_comment = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
+        default=None,
         related_name="replies",  # ответы
         verbose_name="parent_comment",
     )
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="comments", verbose_name="author"
     )
-    post_id = models.ForeignKey(
+    post = models.ForeignKey(
         Post, on_delete=models.CASCADE, related_name="comments", verbose_name="post"
     )
     tags = models.ManyToManyField(

@@ -84,6 +84,8 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "author", "depth_level", "parent_comment"]
 
     def create(self, validated_data):
+
+        user = self.context["request"].user
         post_id = validated_data.pop("post_id")
         parent_comment_id = validated_data.pop("parent_comment_id", None)
         tags = validated_data.pop("tags", [])
@@ -96,6 +98,7 @@ class CommentSerializer(serializers.ModelSerializer):
         depth_level = calculate_comment_depth(parent_comment)
 
         comment = Comment.objects.create(
+            author=user,
             post=post,
             parent_comment=parent_comment,
             depth_level=depth_level,
@@ -104,7 +107,6 @@ class CommentSerializer(serializers.ModelSerializer):
 
         if tags:
             comment.tags.set(tags)
-        comment.save()
         return comment
 
 

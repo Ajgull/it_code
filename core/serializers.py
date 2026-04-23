@@ -2,6 +2,7 @@ from django.db.models import Q
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from core.consts import VOTE_CHOICES
 from core.models import (
     Category,
     Comment,
@@ -164,10 +165,39 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class VoteSerializer(serializers.ModelSerializer):
+    comment_id = serializers.IntegerField(required=False, allow_null=True)
+    post_id = serializers.IntegerField(required=False, allow_null=True)
+    action = serializers.ChoiceField(choices=VOTE_CHOICES, write_only=True)
+
     class Meta:
         model = Vote
-        fields = ["id", "user", "post", "comment", "vote_type"]
-        read_only_fields = ["id"]
+        fields = [
+            "id",
+            "vote_type",
+            "comment_id",
+            "post_id",
+            "action",
+        ]
+        read_only_fields = ["id", "user", "vote_type"]
+
+    def create(self, validated_data):
+        comment_id = validated_data.pop("comment_id", None)
+        post_id = validated_data.pop("post_id", None)
+        action = validated_data.pop("action")
+        user = self.context["request"].user
+
+        if post_id:
+            lookup_fields = {"user": user, "post_id": post_id}
+        elif comment_id:
+            lookup_fields = {"user": user, "comment_id": comment_id}
+        else:
+            raise serializers.ValidationError("post_id or comment_id is required")
+
+        vote, created = Vote.objects.update_or_create(
+            **lookup_fields, defaults={"vote_type": action}
+        )
+
+        return vote
 
 
 class GlobalStopWordSerializer(serializers.ModelSerializer):

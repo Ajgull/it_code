@@ -52,12 +52,11 @@ class RegisterView(APIView):
             user = serializer.save()
             return Response(
                 {
-                    "message": "User created",
+                    "message": "user created",
                     "user": {
                         "id": user.id,
                         "username": user.username,
                         "email": user.email,
-                        "role": getattr(user, "role", None),
                     },
                 },
                 status=status.HTTP_201_CREATED,

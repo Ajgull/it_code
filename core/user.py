@@ -6,20 +6,20 @@ from core.consts import ROLE_CHOICES
 
 class User(AbstractUser):
     username = models.CharField(
-        verbose_name="name", blank=False, max_length=50, unique=True
+        verbose_name='name', blank=False, max_length=50, unique=True
     )
-    email = models.EmailField(verbose_name="email", blank=False, max_length=255)
-    password = models.CharField("passsword", blank=False, max_length=100)
-    role = models.CharField(choices=ROLE_CHOICES, verbose_name="role")
+    email = models.EmailField(verbose_name='email', blank=False, max_length=255)
+    password = models.CharField('passsword', blank=False, max_length=100)
+    role = models.CharField(choices=ROLE_CHOICES, verbose_name='role')
     avatar = models.ImageField(
-        upload_to="avatars/",
-        verbose_name="avatar",
+        upload_to='avatars/',
+        verbose_name='avatar',
         blank=True,
         null=True,
     )
-    is_active = models.BooleanField(verbose_name="active", default=True)
+    is_active = models.BooleanField(verbose_name='active', default=True)
 
     class Meta:
-        verbose_name = "user"
-        verbose_name_plural = "users"
-        ordering = ["username"]
+        verbose_name = 'user'
+        verbose_name_plural = 'users'
+        ordering = ['username']

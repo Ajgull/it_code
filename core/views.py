@@ -6,7 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.filters import CommentFilter, PostFilter, UserFilter
+from core.filters import CategoryFilter, CommentFilter, PostFilter, TagFilter, UserFilter
 from core.models import (
     Category,
     Comment,
@@ -150,12 +150,16 @@ class CategoryView(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = CategoryFilter
 
 
 class TagView(viewsets.ModelViewSet):
     serializer_class = TagSerializer
     queryset = Tag.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = TagFilter
 
 
 class UserView(viewsets.ModelViewSet):

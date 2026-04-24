@@ -2,6 +2,7 @@ from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -36,7 +37,7 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
     serializer_class = CustomTokenSerializer
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid()
         return Response(serializer.validated_data)
@@ -46,17 +47,17 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
     serializer_class = UserCreateSerializer
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: object, **kwargs: object) -> Response:
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
             return Response(
                 {
-                    "message": "user created",
-                    "user": {
-                        "id": user.id,
-                        "username": user.username,
-                        "email": user.email,
+                    'message': 'user created',
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
                     },
                 },
                 status=status.HTTP_201_CREATED,
@@ -71,16 +72,14 @@ class PostView(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = PostFilter
 
-    def perform_create(
-        self, serializer
-    ):  # дополнительные действия при создании, класс CreateModelMixin
+    def perform_create(self, serializer) -> None:  # дополнительные действия при создании, класс CreateModelMixin
         serializer.save(author=self.request.user)
 
     def perform_destroy(
         self,
-        instance,
-    ):  # дополнительные действия при создании, класс DestroyModelMixin
-        instance.status = "deleted"
+        instance: object,
+    ) -> None:  # дополнительные действия при создании, класс DestroyModelMixin
+        instance.status = 'deleted'
         instance.deleted = timezone.now()
         instance.save()
 
@@ -93,7 +92,7 @@ class PostImageView(
     queryset = Post.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: object, **kwargs: object) -> None:
         return self.create(request, *args, **kwargs)
 
 
@@ -113,7 +112,7 @@ class VoteView(
     queryset = Vote.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: object, **kwargs: object) -> None:
         return self.create(request, *args, **kwargs)
 
 
@@ -125,10 +124,10 @@ class GlobalStopWordView(
     queryset = GlobalStopWord.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer) -> None:
         serializer.save(created_by=self.request.user)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: object, **kwargs: object) -> None:
         return self.create(request, *args, **kwargs)
 
 
@@ -143,7 +142,7 @@ class PostStopWordView(
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args: object, **kwargs: object) -> None:
         return self.create(request, *args, **kwargs)
 
 
